@@ -1,6 +1,6 @@
 import React from 'react'
 import { Routes, Route, Link } from 'react-router-dom'
-import ItemList from './components/ItemList'; // ต้องตรงกับชื่อไฟล์จริง
+import ItemList from './components/ItemList';
 import ItemForm from './components/ItemForm'
 import ItemDetail from './components/ItemDetail'
 import EditItem from './components/EditItem'
