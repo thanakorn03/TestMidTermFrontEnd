@@ -1,174 +1,64 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { createItem, fetchItem, updateItem } from '../services/api';
+import React, { useState, useEffect } from "react";
+import Swal from "sweetalert2";
+import {
+  addBook, updateBook,
+  addJournal, updateJournal,
+  addComic, updateComic
+} from "../services/api.js";
 
-const empty = {
-  itemId: '',
-  title: '',
-  author: '',
-  category: '',
-  publishYear: '',
-  isbn: '',
-  publisher: '',
-  status: 'AVAILABLE',
-  coverImage: '',
-  description: '',
-  location: '',
-  addedDate: '',
-  itemType: '',
-  edition: '',
-  pageCount: '',
-  language: '',
-  genre: ''
-};
-
-export default function ItemForm({ editMode }) {
-  const [form, setForm] = useState(empty);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [touched, setTouched] = useState({});
-  const navigate = useNavigate();
-  const { id } = useParams();
+export default function ItemForm({ editItem, onSuccess, type }) {
+  const [form, setForm] = useState({
+    title: "", author: "", category: "", publishYear: "", isbn: "",
+    publisher: "", edition: "", pageCount: "", language: "", genre: "",
+    description: "", coverImage: "https://example.com/cover.jpg", location: ""
+  });
 
   useEffect(() => {
-    if (editMode && id) {
-      (async () => {
-        setLoading(true);
-        try {
-          const res = await fetchItem(id);
-          if (res.data.success) {
-            setForm({ ...res.data.data });
-          }
-        } catch (err) {
-          setError(err.message);
-        } finally {
-          setLoading(false);
-        }
-      })();
-    }
-  }, [editMode, id]);
+    if (editItem) setForm({ ...form, ...editItem });
+  }, [editItem]);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setTouched({ ...touched, [e.target.name]: true });
-  };
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const requiredFields = ['title', 'itemId'];
-    const emptyRequired = requiredFields.filter(f => !form[f]);
-    if (emptyRequired.length > 0) {
-      alert('กรุณากรอกฟิลด์ที่จำเป็น');
-      return;
+
+    const requiredFields = ["title", "author", "category", "publisher", "location"];
+    for (let f of requiredFields) {
+      if (!form[f]?.trim()) return Swal.fire("ผิดพลาด!", `กรุณากรอก ${f}`, "error");
     }
+
+    const data = { ...form, publishYear: Number(form.publishYear)||0, pageCount: Number(form.pageCount)||0 };
+
     try {
-      if (editMode) {
-        await updateItem(id, form);
-        alert('อัปเดตข้อมูลเรียบร้อยแล้ว!');
-        navigate(`/items/${id}`);
+      if (type === "books") {
+        editItem ? await updateBook(editItem.itemId, data) : await addBook(data);
+      } else if (type === "journals") {
+        editItem ? await updateJournal(editItem.itemId, data) : await addJournal(data);
       } else {
-        await createItem(form);
-        alert('เพิ่มสินค้าสำเร็จ!');
-        navigate('/');
+        editItem ? await updateComic(editItem.itemId, data) : await addComic(data);
       }
+
+      Swal.fire("สำเร็จ!", editItem ? "แก้ไขเรียบร้อย" : "เพิ่มเรียบร้อย", "success");
+      onSuccess?.();
     } catch (err) {
-      alert('บันทึกไม่สำเร็จ: ' + err.message);
+      console.error(err);
+      Swal.fire("ผิดพลาด!", "บันทึกไม่สำเร็จ", "error");
     }
   };
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error: {error}</p>;
-
   return (
-    <div style={{ maxWidth: '900px', margin: '20px auto', padding: '20px', borderRadius: '8px', boxShadow: '0 0 10px rgba(0,0,0,0.1)', background: '#fff' }}>
-      <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>{editMode ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</h2>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
-        {/* Form */}
-        <form onSubmit={handleSubmit} style={{ flex: '2 1 400px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-          {[
-            { label: 'รหัส (itemId)', name: 'itemId', required: !editMode },
-            { label: 'ชื่อ (title)', name: 'title', required: true },
-            { label: 'ผู้แต่ง (author)', name: 'author' },
-            { label: 'หมวดหมู่ (category)', name: 'category' },
-            { label: 'ปีที่พิมพ์ (publishYear)', name: 'publishYear', type: 'number' },
-            { label: 'ISBN', name: 'isbn' },
-            { label: 'สำนักพิมพ์ (publisher)', name: 'publisher' },
-            { label: 'สถานะ (status)', name: 'status', type: 'select', options: ['AVAILABLE', 'BORROWED', 'RESERVED'] },
-            { label: 'Edition', name: 'edition' },
-            { label: 'จำนวนหน้า (pageCount)', name: 'pageCount', type: 'number' },
-            { label: 'ภาษา (language)', name: 'language' },
-            { label: 'Genre', name: 'genre' },
-            { label: 'ประเภทสินค้า (itemType)', name: 'itemType' },
-            { label: 'วันที่เพิ่ม (addedDate)', name: 'addedDate', type: 'date' },
-            { label: 'ตำแหน่ง (location)', name: 'location' },
-            { label: 'รูปปก (coverImage URL)', name: 'coverImage' }
-          ].map(field => (
-            <label key={field.name} style={{ display: 'flex', flexDirection: 'column', gridColumn: field.name === 'description' ? '1 / -1' : undefined }}>
-              {field.label}
-              {field.type === 'select' ? (
-                <select
-                  name={field.name}
-                  value={form[field.name]}
-                  onChange={handleChange}
-                  style={{
-                    borderColor: touched[field.name] && field.required && !form[field.name] ? 'red' : '#ccc'
-                  }}
-                >
-                  {field.options.map(opt => <option key={opt}>{opt}</option>)}
-                </select>
-              ) : (
-                <input
-                  type={field.type || 'text'}
-                  name={field.name}
-                  value={form[field.name] || ''}
-                  onChange={handleChange}
-                  style={{
-                    borderColor: touched[field.name] && field.required && !form[field.name] ? 'red' : '#ccc'
-                  }}
-                  required={field.required}
-                  disabled={field.name === 'itemId' && editMode}
-                />
-              )}
-            </label>
-          ))}
-          <label style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' }}>
-            คำอธิบาย
-            <textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              rows={4}
-              style={{ borderColor: touched['description'] && !form.description ? 'red' : '#ccc' }}
-            />
-          </label>
-          <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', gap: '10px' }}>
-            <button type="submit" style={{ padding: '8px 20px', background: '#4CAF50', color: '#fff', border: 'none', borderRadius: '4px' }}>บันทึก</button>
-            <button type="button" onClick={() => navigate(-1)} style={{ padding: '8px 20px', background: '#ccc', border: 'none', borderRadius: '4px' }}>ยกเลิก</button>
-          </div>
-        </form>
-
-        {/* Preview รูปปก */}
-        <div style={{ flex: '1 1 200px', textAlign: 'center' }}>
-          <h3>Preview รูปปก</h3>
-          {form.coverImage ? (
-            <img src={form.coverImage} alt={form.title} style={{ width: '100%', borderRadius: '8px', marginTop: '10px' }} />
-          ) : (
-            <div style={{ width: '100%', height: '300px', border: '2px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', marginTop: '10px' }}>
-              <span>ยังไม่มีรูปปก</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile Responsive */}
-      <style>
-        {`
-          @media (max-width: 768px) {
-            form { grid-template-columns: 1fr; }
-            div[style*="display: flex"][style*="flex-wrap: wrap"] { flex-direction: column; }
-          }
-        `}
-      </style>
-    </div>
+    <form onSubmit={handleSubmit} className="space-y-2 p-4 border rounded shadow-md bg-white">
+      {Object.keys(form).map(key => (
+        <input
+          key={key}
+          type={key.includes("Year") || key.includes("Count") ? "number" : "text"}
+          name={key} placeholder={key} value={form[key]} onChange={handleChange}
+          className="w-full border p-2 rounded"
+        />
+      ))}
+      <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded">
+        {editItem ? "แก้ไข" : "เพิ่ม"}
+      </button>
+    </form>
   );
 }

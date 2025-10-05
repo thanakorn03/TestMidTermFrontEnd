@@ -1,77 +1,59 @@
-    import React, { useEffect, useState } from 'react'
-    import { Link } from 'react-router-dom'
-    import { fetchItems, deleteItem } from '../services/api'
+import React, { useState } from "react";
+import Swal from "sweetalert2";
+import { deleteBook, deleteJournal, deleteComic } from "../services/api.js";
 
+export default function ItemList({ items, onEdit, onView, type }) {
 
-    export default function ItemList() {
-    const [items, setItems] = useState([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(null)
+  const handleDelete = async (id) => {
+    if (!confirm("ต้องการลบรายการนี้หรือไม่?")) return;
 
-    const load = async () => {
-  setLoading(true)
-  try {
-    const res = await fetchItems()
-    console.log("API response:", res.data)
-    setItems(res.data.data || [])   // 👈 ดึง array ออกจาก data
-  } catch (err) {
-    setError(err.message || 'เกิดข้อผิดพลาด')
-  } finally {
-    setLoading(false)
-  }
-}
-
-
-    useEffect(() => { load() }, [])
-
-
-    const handleDelete = async (id) => {
-    if (!confirm('คุณต้องการลบสินค้านี้หรือไม่?')) return
     try {
-    await deleteItem(id)
-    await load()
+      if (type === "books") await deleteBook(id);
+      else if (type === "journals") await deleteJournal(id);
+      else await deleteComic(id);
+
+      Swal.fire("สำเร็จ!", "ลบเรียบร้อยแล้ว", "success");
     } catch (err) {
-    alert('ลบไม่สำเร็จ: ' + err.message)
+      console.error(err);
+      Swal.fire("ผิดพลาด!", "ลบไม่สำเร็จ", "error");
     }
-    }
+  };
 
-
-    if (loading) return <p>กำลังโหลด...</p>
-    if (error) return <p>ข้อผิดพลาด: {error}</p>
-
-
-    return (
-    <div>
-    <h2>รายการสินค้า</h2>
-    <table className="table">
-    <thead>
-    <tr>
-    <th>itemId</th>
-    <th>Title</th>
-    <th>Author</th>
-    <th>Category</th>
-    <th>ปี</th>
-    <th>สถานะ</th>
-    <th>การกระทำ</th>
-    </tr>
-    </thead>
-    <tbody>
-    {items.map((it) => (
-    <tr key={it.itemId}>
-    <td>{it.itemId}</td>
-    <td><Link to={`/items/${it.itemId}`}>{it.title}</Link></td>
-    <td>{it.author}</td>
-    <td>{it.category}</td>
-    <td>{it.publishYear}</td>
-    <td>{it.status}</td>
-    <td>
-    <Link to={`/edit/${it.itemId}`} className="btn">แก้ไข</Link>
-    <button className="btn danger" onClick={() => handleDelete(it.itemId)}>ลบ</button>
-    </td>
-    </tr>
-    ))}
-    </tbody>
-    </table>
+  return (
+    <div className="p-4">
+      <h2 className="text-xl font-bold mb-4">📚 {type.toUpperCase()}</h2>
+      <table className="w-full border-collapse border">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border p-2">Cover</th>
+            <th className="border p-2">Title</th>
+            <th className="border p-2">Author</th>
+            <th className="border p-2">Year</th>
+            <th className="border p-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.length === 0 ? (
+            <tr><td colSpan="5" className="text-center p-4">ไม่มีข้อมูล</td></tr>
+          ) : (
+            items.map(item => (
+              <tr key={item.itemId || item.id}>
+                <td className="border p-2">
+                  <img src={item.coverImage} alt={item.title} className="w-16 h-20 object-cover" />
+                </td>
+                <td className="border p-2">{item.title}</td>
+                <td className="border p-2">{item.author || "-"}</td>
+                <td className="border p-2">{item.publishYear || "-"}</td>
+                <td className="border p-2 space-x-2">
+                  <button className="bg-blue-500 text-white px-2 py-1 rounded" onClick={() => onView(item)}>👁</button>
+                  <button className="bg-yellow-500 text-white px-2 py-1 rounded" onClick={() => onEdit(item)}>✏️</button>
+                  <button className="bg-red-500 text-white px-2 py-1 rounded" onClick={() => handleDelete(item.itemId || item.id)}>🗑</button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
     </div>
-    )
-    }
+  );
+}

@@ -1,30 +1,13 @@
-import React from 'react'
-import { Routes, Route, Link } from 'react-router-dom'
-import ItemList from './components/ItemList';
-import ItemForm from './components/ItemForm'
-import ItemDetail from './components/ItemDetail'
-import EditItem from './components/EditItem'
-
+import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Home from "./pages/Home.jsx";
 
 export default function App() {
-return (
-<div className="container">
-<header className="header">
-<h1>ร้านหนังสือ (Front-end)</h1>
-<nav>
-<Link to="/">รายการ</Link>
-<Link to="/create">เพิ่มสินค้า</Link>
-</nav>
-</header>
-
-<main>
-<Routes>
-<Route path="/" element={<ItemList />} />
-<Route path="/create" element={<ItemForm />} />
-<Route path="/edit/:id" element={<EditItem editMode />} />
-<Route path="/items/:id" element={<ItemDetail />} />
-</Routes>
-</main>
-</div>
-)
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
